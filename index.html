@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AryaMiner Proposal Generator_</title>
+<title>AryaMiner Proposal Generator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -163,11 +163,11 @@
     padding:26px 34px 18px;
   }
   .brand{ display:flex; align-items:center; gap:12px; }
-.brand-badge{
+  .brand-badge{
     width:46px; height:46px; border-radius:11px; background:#fff; border:1px solid var(--line);
     display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px;
-}
-.brand-badge img{ width:100%; height:100%; object-fit:contain; }
+  }
+  .brand-badge img{ width:100%; height:100%; object-fit:contain; }
   .brand-name{
     font-family:'Manrope',sans-serif; font-weight:800; font-size:19px; color:var(--ink);
     letter-spacing:.02em;
@@ -445,7 +445,8 @@
       <div class="topbar"></div>
       <div class="head">
         <div class="brand">
-<div class="brand-badge"><img src="https://aryaminer.com/cdn/shop/files/LogoAryaminer.png" alt="AryaMiner"></div>          <div>
+          <div class="brand-badge"><img src="https://aryaminer.com/cdn/shop/files/LogoAryaminer.png" alt="AryaMiner"></div>
+          <div>
             <div class="brand-name">ARYAMINER</div>
             <div class="brand-url">www.aryaminer.com</div>
           </div>
@@ -765,29 +766,64 @@ function addAccessoryRow(name='', qty=1, price=''){
   render();
 }
 
-function handleImgUpload(inputId, targetId, nameId, isDevicePhoto){
+function compressImage(file, maxDim, quality){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('Could not read that image file.'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleImgUpload(inputId, targetId, nameId, isDevicePhoto){
   const file = $(inputId).files[0];
   if(!file) return;
-  $(nameId).textContent = file.name;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const cleanName = file.name.replace(/\.[^/.]+$/, '');
-    if(isDevicePhoto){
-      $(targetId).innerHTML = `<img src="${e.target.result}" alt="device">`;
-      $('devicePhotoSelect').value = '';
-      $('devicePhotoName').value = cleanName;
-      $('devicePhotoUrl').value = e.target.result;
-    } else {
-      $(targetId).style.backgroundImage =
-        `linear-gradient(rgba(6,30,17,0.15), rgba(6,30,17,0.55)), url(${e.target.result})`;
-      $(targetId).style.backgroundSize = 'cover';
-      $(targetId).style.backgroundPosition = 'center';
-      $('heroPhotoSelect').value = '';
-      $('heroPhotoName').value = cleanName;
-      $('heroPhotoUrl').value = e.target.result;
+  $(nameId).textContent = 'Compressing…';
+  const cleanName = file.name.replace(/\.[^/.]+$/, '');
+
+  // try progressively smaller/lower-quality passes until it fits a Sheets cell
+  const attempts = [[900,0.75],[700,0.65],[500,0.55],[380,0.45]];
+  let dataUrl = null;
+  for(const [maxDim, quality] of attempts){
+    try{
+      dataUrl = await compressImage(file, maxDim, quality);
+      if(dataUrl.length <= 45000) break;
+    }catch(err){
+      $(nameId).textContent = err.message;
+      return;
     }
-  };
-  reader.readAsDataURL(file);
+  }
+  $(nameId).textContent = file.name + (dataUrl.length > 45000 ? ' (still large — consider a hosted URL)' : '');
+
+  if(isDevicePhoto){
+    $(targetId).innerHTML = `<img src="${dataUrl}" alt="device">`;
+    $('devicePhotoSelect').value = '';
+    $('devicePhotoName').value = cleanName;
+    $('devicePhotoUrl').value = dataUrl;
+  } else {
+    $(targetId).style.backgroundImage =
+      `linear-gradient(rgba(6,30,17,0.15), rgba(6,30,17,0.55)), url(${dataUrl})`;
+    $(targetId).style.backgroundSize = 'cover';
+    $(targetId).style.backgroundPosition = 'center';
+    $('heroPhotoSelect').value = '';
+    $('heroPhotoName').value = cleanName;
+    $('heroPhotoUrl').value = dataUrl;
+  }
 }
 
 function render(){
