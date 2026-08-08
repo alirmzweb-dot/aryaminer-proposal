@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AryaMiner Proposal Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#0B3D22;
+    --ink-2:#0E4A2A;
+    --accent:#3FA34D;
+    --accent-light:#DCEFDF;
+    --paper:#FFFFFF;
+    --mist:#F4F7F5;
+    --line:#E1E8E3;
+    --text:#152318;
+    --text-soft:#5B6B60;
+    --shadow: 0 10px 30px rgba(11,61,34,0.10);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--mist);
+    font-family:'Inter',sans-serif;
+    color:var(--text);
+  }
+  .app{
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width: 980px){
+    .app{grid-template-columns: 1fr;}
+  }
+
+  /* ---------- FORM PANEL ---------- */
+  .panel{
+    background:var(--paper);
+    border-right:1px solid var(--line);
+    padding:28px 24px 60px;
+    overflow-y:auto;
+    max-height:100vh;
+    position:sticky;
+    top:0;
+  }
+  @media (max-width: 980px){ .panel{ position:static; max-height:none; } }
+
+  .panel h1{
+    font-family:'Manrope',sans-serif;
+    font-size:20px;
+    font-weight:800;
+    color:var(--ink);
+    margin:0 0 2px;
+  }
+  .panel .sub{
+    font-size:12.5px;
+    color:var(--text-soft);
+    margin:0 0 26px;
+  }
+  .field-group{
+    margin-bottom:22px;
+    padding-bottom:22px;
+    border-bottom:1px solid var(--line);
+  }
+  .field-group:last-of-type{ border-bottom:none; }
+  .field-group .fg-title{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 12px;
+  }
+  label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text);
+    margin:0 0 5px;
+  }
+  .field{ margin-bottom:12px; }
+  input[type=text], input[type=number], input[type=date], select{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    background:var(--mist);
+    color:var(--text);
+  }
+  input:focus, select:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    background:var(--paper);
+  }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .hint{ font-size:11px; color:var(--text-soft); margin-top:4px; }
+  .checkbox-row{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .checkbox-row input{ width:16px; height:16px; accent-color:var(--accent); }
+  .checkbox-row label{ margin:0; font-weight:500; }
+  .file-btn{
+    display:block; width:100%; padding:9px 10px; border:1px dashed var(--line);
+    border-radius:8px; background:var(--mist); font-size:12.5px; color:var(--text-soft); cursor:pointer;
+    text-align:center;
+  }
+  .file-btn:hover{ border-color:var(--accent); color:var(--ink); }
+  .file-name{ font-size:11px; color:var(--accent); margin-top:5px; }
+  .acc-row{ display:grid; grid-template-columns:1fr 46px 64px 24px; gap:5px; margin-bottom:8px; align-items:center; }
+  .acc-row input{ padding:7px 6px; font-size:12.5px; }
+  .acc-remove{
+    width:24px; height:24px; border:none; border-radius:6px; background:var(--mist);
+    color:var(--text-soft); cursor:pointer; font-size:14px; line-height:1;
+  }
+  .acc-remove:hover{ background:#fde2e2; color:#b3261e; }
+
+  .actions{
+    position:sticky; bottom:0; background:var(--paper); padding-top:14px;
+  }
+  .btn{
+    width:100%;
+    padding:12px 14px;
+    border:none;
+    border-radius:9px;
+    font-family:'Manrope',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    margin-bottom:9px;
+  }
+  .btn-primary{ background:var(--ink); color:#fff; }
+  .btn-primary:hover{ background:var(--ink-2); }
+  .btn-secondary{ background:var(--accent-light); color:var(--ink); }
+  .btn-secondary:hover{ background:#cbe8d0; }
+
+  /* ---------- PREVIEW PANEL ---------- */
+  .preview-wrap{
+    padding:40px 30px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    overflow-x:hidden;
+  }
+  .sheet-scale{ overflow:hidden; }
+  #sheet{
+    width:794px;
+    min-height:1123px;
+    background:var(--paper);
+    box-shadow:var(--shadow);
+    position:relative;
+    padding:0;
+    font-family:'Inter',sans-serif;
+    color:var(--text);
+  }
+  .topbar{ height:8px; background:linear-gradient(90deg,var(--ink),var(--accent)); }
+
+  .head{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:26px 34px 18px;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-badge{
+    width:46px; height:46px; border-radius:11px; background:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-family:'Manrope',sans-serif; font-weight:800; font-size:20px;
+  }
+  .brand-name{
+    font-family:'Manrope',sans-serif; font-weight:800; font-size:19px; color:var(--ink);
+    letter-spacing:.02em;
+  }
+  .brand-url{ font-size:10.5px; color:var(--accent); font-weight:600; margin-top:1px; }
+  .head-title{ text-align:right; }
+  .head-title h2{
+    margin:0; font-family:'Manrope',sans-serif; font-weight:800; font-size:22px; color:var(--ink);
+  }
+  .head-title p{ margin:2px 0 0; font-size:12px; color:var(--text-soft); }
+
+  .info-hero{
+    display:grid; grid-template-columns: 250px 1fr; gap:0; margin:0 34px 20px;
+    border-radius:12px; overflow:hidden; box-shadow:var(--shadow);
+  }
+  .info-box{
+    background:var(--ink); color:#fff; padding:20px 18px; display:flex; flex-direction:column; gap:16px;
+  }
+  .info-item .lab{ font-size:10px; font-weight:700; letter-spacing:.07em; color:var(--accent-light); text-transform:uppercase; opacity:.85; }
+  .info-item .val{ font-size:13.5px; font-weight:600; margin-top:4px; line-height:1.35; }
+  .hero-photo{
+    position:relative; min-height:210px; background-size:cover; background-position:center;
+    background-image: linear-gradient(135deg,#0B3D22 0%,#1F6E3E 55%,#3FA34D 100%);
+    display:flex; align-items:flex-end;
+  }
+  .hero-overlay{
+    background:rgba(6,30,17,0.72); color:#fff; padding:14px 18px; width:100%;
+  }
+  .hero-overlay .ov-title{ font-size:10.5px; font-weight:700; letter-spacing:.06em; color:#9BE3AC; text-transform:uppercase; margin-bottom:5px; }
+  .hero-overlay p{ margin:0; font-size:11.5px; line-height:1.5; color:#EAF5EC; }
+
+  .section-title{
+    margin:26px 34px 10px; font-family:'Manrope',sans-serif; font-weight:800; font-size:15px; color:var(--ink);
+    display:flex; align-items:center; gap:10px;
+  }
+  .section-title::after{ content:""; flex:1; height:1px; background:var(--line); }
+
+  .miner-row{ display:grid; grid-template-columns:190px 1fr; gap:18px; margin:0 34px; }
+  .miner-photo{
+    background:var(--mist); border:1px solid var(--line); border-radius:10px; height:170px;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .miner-photo img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .miner-photo .ph-empty{ font-size:11px; color:var(--text-soft); text-align:center; padding:10px; }
+  .spec-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .spec-table td{ padding:9px 10px; border-bottom:1px solid var(--line); }
+  .spec-table td:first-child{ color:var(--text-soft); font-weight:600; width:46%; }
+  .spec-table td:last-child{ font-weight:700; color:var(--ink); text-align:right; }
+
+  .perf-table{ margin:0 34px; border-radius:10px; overflow:hidden; border:1px solid var(--line); }
+  .perf-table table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .perf-table th{ background:var(--ink); color:#fff; padding:9px 14px; text-align:left; font-weight:700; font-size:11px; letter-spacing:.03em; text-transform:uppercase; }
+  .perf-table th:last-child, .perf-table td:last-child{ text-align:right; }
+  .perf-table td{ padding:9px 14px; border-bottom:1px solid var(--line); }
+  .perf-table tr:nth-child(even) td{ background:var(--mist); }
+  .perf-table tr:last-child td{ border-bottom:none; font-weight:800; color:var(--ink); }
+
+  .advantages{ display:flex; margin:22px 34px 0; gap:10px; }
+  .adv-card{ flex:1; background:var(--mist); border:1px solid var(--line); border-radius:10px; padding:14px 8px; text-align:center; }
+  .adv-card svg{ width:26px; height:26px; color:var(--accent); }
+  .adv-card p{ font-size:10.5px; font-weight:700; color:var(--ink); margin:8px 0 0; line-height:1.3; }
+
+  .footer{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:22px 34px 30px; }
+  .footer-box{ background:var(--mist); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .footer-box h4{ margin:0 0 6px; font-size:11.5px; font-weight:800; color:var(--ink); text-transform:uppercase; letter-spacing:.03em; }
+  .footer-box p{ margin:0; font-size:10.8px; line-height:1.5; color:var(--text-soft); }
+
+  /* ---------- MOBILE ---------- */
+  @media (max-width: 980px){
+    .preview-wrap{ padding:20px 12px; }
+  }
+  @media (max-width: 480px){
+    .panel{ padding:20px 16px 24px; }
+    .row2{ grid-template-columns:1fr; }
+    .acc-row{ grid-template-columns:1fr 1fr 1fr 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===================== FORM PANEL ===================== -->
+  <div class="panel">
+    <h1>AryaMiner Proposal Generator</h1>
+    <p class="sub">Fill in the deal data — the proposal on the right updates live.</p>
+
+    <div class="field-group">
+      <p class="fg-title">Proposal Info</p>
+      <div class="checkbox-row">
+        <input type="checkbox" id="showCustomer" checked>
+        <label for="showCustomer">Include customer name</label>
+      </div>
+      <div class="field" id="customerField">
+        <label>Customer / Company Name</label>
+        <input type="text" id="customerName" placeholder="e.g. Etheras Energy Solutions Ltd">
+      </div>
+      <div class="field" id="customerPhoneField">
+        <label>Customer Phone Number</label>
+        <input type="text" id="customerPhone" placeholder="e.g. +971 50 123 4567">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Prepared By</label>
+          <input type="text" id="preparedBy" placeholder="Your name">
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="propDate">
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <p class="fg-title">Device</p>
+      <div class="field">
+        <label>Model</label>
+        <select id="deviceModel">
+          <option value="s19xp_hyd">Antminer S19 XP Hyd (293 TH/s · 5567 W)</option>
+          <option value="m30s_pp">Whatsminer M30S++ (108 TH/s · 3474 W)</option>
+          <option value="custom">Custom model…</option>
+        </select>
+        <p class="hint" id="deviceListStatus">Loading team device list…</p>
+      </div>
+      <div class="field" id="customModelField" style="display:none;">
+        <label>Custom Model Name</label>
+        <input type="text" id="customModelName" placeholder="e.g. Antminer S21 Pro">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Hashrate (TH/s)</label>
+          <input type="number" id="hashrateTH" value="293">
+        </div>
+        <div class="field">
+          <label>Power (W)</label>
+          <input type="number" id="powerW" value="5567">
+        </div>
+      </div>
+      <div class="field" id="saveDeviceField" style="display:none;">
+        <button type="button" class="file-btn" style="cursor:pointer;border-style:solid;" onclick="saveDeviceToTeam()">+ Save it for next time</button>
+        <p class="hint">Adds the model name, hashrate and power to the shared list — price is never shared.</p>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Quantity</label>
+          <input type="number" id="qty" value="24">
+        </div>
+        <div class="field">
+          <label>Price / Unit ($)</label>
+          <input type="number" id="priceUnit" value="1250">
+        </div>
+      </div>
+      <label>Device Photo</label>
+      <select id="devicePhotoSelect">
+        <option value="">— Upload below, or add a new one —</option>
+      </select>
+      <div class="row2" style="margin-top:10px;">
+        <div class="field">
+          <label>Photo Name</label>
+          <input type="text" id="devicePhotoName" placeholder="e.g. S19 XP Hyd Front">
+        </div>
+        <div class="field">
+          <label>Upload</label>
+          <input type="file" id="deviceImgInput" accept="image/*" style="display:none;">
+          <div class="file-btn" style="cursor:pointer;" onclick="document.getElementById('deviceImgInput').click()">Click to upload</div>
+        </div>
+      </div>
+      <input type="hidden" id="devicePhotoUrl">
+      <div class="file-name" id="deviceImgName"></div>
+      <button type="button" class="file-btn" style="cursor:pointer;border-style:solid;" onclick="saveImageForNextTime('device')">+ Save it for next time</button>
+      <p class="hint">Tip: use a clear, well-lit photo of the device on a plain background (JPG/PNG, ideally under 1MB) so it saves smoothly. Uploading fills in the photo — click Save to make it available to the whole team next time.</p>
+    </div>
+
+    <div class="field-group">
+      <p class="fg-title">Electricity</p>
+      <div class="field">
+        <label>Type</label>
+        <select id="elecType">
+          <option value="residential">Residential (Near-Zero)</option>
+          <option value="solar">Curtailed Solar (Very Low)</option>
+          <option value="industrial">Industrial</option>
+          <option value="commercial">Commercial</option>
+          <option value="custom">Custom rate…</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Rate ($/kWh)</label>
+        <input type="number" step="0.001" id="elecRate" value="0.03">
+        <p class="hint">Auto-fills from type above — edit if you know the exact rate.</p>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <p class="fg-title">Daily Profit</p>
+      <div class="row2">
+        <div class="field">
+          <label>Net Profit (per device / day, $)</label>
+          <input type="number" step="0.01" id="manualProfitDay" value="9">
+        </div>
+        <div class="field">
+          <label>Currency Being Mined</label>
+          <input type="text" id="coinSymbol" value="BTC" placeholder="e.g. BTC, LTC, KAS">
+        </div>
+      </div>
+      <p class="hint">Type in the daily profit per device yourself, and write which coin it's for — this is always shown on the proposal.</p>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="showCoin">
+        <label for="showCoin">Also convert profit into coin amount</label>
+      </div>
+      <div class="field" id="coinPriceField" style="display:none;">
+        <label>Coin Price ($)</label>
+        <input type="number" id="coinPrice" value="65000">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <p class="fg-title">Additional Equipment</p>
+      <p class="hint" style="margin-top:-4px;margin-bottom:10px;">Cooling, radiators, containers, or any other accessories the system needs. Their cost is added to the total investment and to the ROI calculation.</p>
+      <div id="accessoriesList"></div>
+      <button type="button" class="file-btn" onclick="addAccessoryRow()" style="cursor:pointer;border-style:solid;">+ Add Item</button>
+    </div>
+
+    <div class="field-group">
+      <p class="fg-title">Key Advantages</p>
+      <div class="field"><label>Advantage 1</label><input type="text" id="adv1" value="Low Initial Investment"></div>
+      <div class="field"><label>Advantage 2</label><input type="text" id="adv2" value="Low-Cost Power"></div>
+      <div class="field"><label>Advantage 3</label><input type="text" id="adv3" value="Fast Deployment"></div>
+      <div class="field"><label>Advantage 4</label><input type="text" id="adv4" value="Attractive ROI"></div>
+      <div class="field"><label>Advantage 5</label><input type="text" id="adv5" value="Flexible Scaling"></div>
+    </div>
+
+    <div class="field-group">
+      <p class="fg-title">Future Expansion</p>
+      <textarea id="futureExpansion" rows="3" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-family:'Inter',sans-serif;font-size:12.5px;background:var(--mist);color:var(--text);">This solution can scale to additional units or sites as more power capacity becomes available.</textarea>
+    </div>
+
+    <div class="field-group">
+      <p class="fg-title">Important Notice</p>
+      <textarea id="importantNotice" rows="3" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-family:'Inter',sans-serif;font-size:12.5px;background:var(--mist);color:var(--text);">All revenue estimates are based on Bitcoin price and network conditions as of the proposal date. Actual results may vary with market conditions, uptime, and pool fees.</textarea>
+      <p class="hint">Edit freely — this is copied into the proposal exactly as written.</p>
+    </div>
+
+    <div class="field-group">
+      <p class="fg-title">Site / Hero Photo</p>
+      <select id="heroPhotoSelect">
+        <option value="">— Upload below, or add a new one —</option>
+      </select>
+      <div class="row2" style="margin-top:10px;">
+        <div class="field">
+          <label>Photo Name</label>
+          <input type="text" id="heroPhotoName" placeholder="e.g. Cyprus Solar Park">
+        </div>
+        <div class="field">
+          <label>Upload</label>
+          <input type="file" id="heroImgInput" accept="image/*" style="display:none;">
+          <div class="file-btn" style="cursor:pointer;" onclick="document.getElementById('heroImgInput').click()">Click to upload</div>
+        </div>
+      </div>
+      <input type="hidden" id="heroPhotoUrl">
+      <div class="file-name" id="heroImgName"></div>
+      <button type="button" class="file-btn" style="cursor:pointer;border-style:solid;" onclick="saveImageForNextTime('hero')">+ Save it for next time</button>
+      <p class="hint">Tip: use a real site/solar-farm/facility photo, landscape orientation works best (JPG/PNG, ideally under 1MB). Uploading fills in the photo — click Save to make it available to the whole team next time.</p>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="exportPDF()">Download PDF</button>
+      <button class="btn btn-secondary" onclick="exportPNG()">Download PNG</button>
+    </div>
+  </div>
+
+  <!-- ===================== PREVIEW PANEL ===================== -->
+  <div class="preview-wrap">
+    <div class="sheet-scale" id="sheetScale">
+    <div id="sheet">
+      <div class="topbar"></div>
+      <div class="head">
+        <div class="brand">
+          <div class="brand-badge">A</div>
+          <div>
+            <div class="brand-name">ARYAMINER</div>
+            <div class="brand-url">www.aryaminer.com</div>
+          </div>
+        </div>
+        <div class="head-title">
+          <h2>MINING PROPOSAL</h2>
+          <p>Turning Renewable Energy into Digital Wealth</p>
+        </div>
+      </div>
+
+      <div class="info-hero">
+        <div class="info-box">
+          <div class="info-item" id="customerRow">
+            <div class="lab">Prepared For</div>
+            <div class="val" id="outCustomer">—</div>
+            <div class="val" id="outCustomerPhone" style="font-weight:400;font-size:12px;opacity:.85;margin-top:2px;"></div>
+          </div>
+          <div class="info-item">
+            <div class="lab">Date</div>
+            <div class="val" id="outDate">—</div>
+          </div>
+          <div class="info-item">
+            <div class="lab">Prepared By</div>
+            <div class="val" id="outPreparedBy">—<br><span style="font-weight:400;opacity:.85;">AryaMiner</span></div>
+          </div>
+        </div>
+        <div class="hero-photo" id="heroPhoto">
+          <div class="hero-overlay">
+            <div class="ov-title">Project Overview</div>
+            <p id="outOverview">This proposal outlines a Bitcoin mining solution.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Recommended Miner</div>
+      <div class="miner-row">
+        <div class="miner-photo" id="devicePhoto"><div class="ph-empty">No device photo uploaded</div></div>
+        <table class="spec-table">
+          <tr><td>Model</td><td id="outModel">—</td></tr>
+          <tr><td>Quantity</td><td id="outQty">—</td></tr>
+          <tr><td>Total Hashrate</td><td id="outHashrate">—</td></tr>
+          <tr><td>Est. Power Consumption</td><td id="outPower">—</td></tr>
+          <tr><td>Power Source</td><td id="outElecType">—</td></tr>
+          <tr><td>Mining Currency</td><td id="outCoin">—</td></tr>
+          <tr><td>Device Price</td><td id="outPrice">—</td></tr>
+          <tr id="accRow" style="display:none;"><td>Additional Equipment</td><td id="outAccessories">—</td></tr>
+          <tr><td>Total Investment</td><td id="outTotalInvestment">—</td></tr>
+        </table>
+      </div>
+
+      <div class="section-title">Mining Performance Estimate</div>
+      <div class="perf-table">
+        <table>
+          <tr><th>Description</th><th>Estimate</th></tr>
+          <tr><td>Estimated Net Profit (per device / day)</td><td id="outProfitDeviceDay">—</td></tr>
+          <tr><td>Estimated Net Profit (total / day)</td><td id="outProfitTotalDay">—</td></tr>
+          <tr><td>Estimated Net Profit (total / month)</td><td id="outProfitTotalMonth">—</td></tr>
+          <tr id="btcRow1" style="display:none;"><td id="btcLabel1">Estimated Net Profit (total / day, BTC)</td><td id="outBtcDay">—</td></tr>
+          <tr id="btcRow2" style="display:none;"><td id="btcLabel2">Estimated Net Profit (total / month, BTC)</td><td id="outBtcMonth">—</td></tr>
+          <tr><td>Estimated Payback Period</td><td id="outPayback">—</td></tr>
+        </table>
+      </div>
+
+      <div class="advantages">
+        <div class="adv-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg><p id="outAdv1">Low Initial Investment</p></div>
+        <div class="adv-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg><p id="outAdv2">Low-Cost Power</p></div>
+        <div class="adv-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6M12 2v3"/></svg><p id="outAdv3">Fast Deployment</p></div>
+        <div class="adv-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-5 4 4 8-8M20 8h-4v4"/></svg><p id="outAdv4">Attractive ROI</p></div>
+        <div class="adv-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6v6H4zM14 14h6v6h-6zM10 4l4 0 0 4M14 10l0 4-4 0"/></svg><p id="outAdv5">Flexible Scaling</p></div>
+      </div>
+
+      <div class="footer">
+        <div class="footer-box">
+          <h4>Future Expansion</h4>
+          <p id="outFuture">This solution can scale to additional units or sites as more power capacity becomes available.</p>
+        </div>
+        <div class="footer-box">
+          <h4>Important Notice</h4>
+          <p id="outNotice">All revenue estimates are based on Bitcoin price and network conditions as of the proposal date. Actual results may vary with market conditions, uptime, and pool fees.</p>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEVICE_PRESETS = {
+  s19xp_hyd: { name:"Antminer S19 XP Hyd", hashrate:293, power:5567 },
+  m30s_pp:   { name:"Whatsminer M30S++ (Used/Refurbished)", hashrate:108, power:3474 },
+  custom:    { name:"", hashrate:0, power:0 }
+};
+const ELEC_PRESETS = {
+  residential: { label:"Residential Electricity (Near-Zero Cost)", rate:0.03 },
+  solar:       { label:"Curtailed Solar Energy (Very Low Cost)", rate:0.01 },
+  industrial:  { label:"Industrial Electricity", rate:0.06 },
+  commercial:  { label:"Commercial Electricity", rate:0.08 },
+  custom:      { label:"Custom Power Source", rate:0.05 }
+};
+
+// Paste your Google Apps Script Web App URL here (see Code.gs) to enable the
+// shared team device list and the team activity log. Leave blank to run
+// with just the two built-in presets and no shared log.
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZLOAQYfxcxAnifJIo1UAi8Bs6n2M0-XSve7TodICQ6Y24JbJWEJbvi-5ocXW4Fq_b/exec";
+
+let teamDeviceCounter = 0;
+
+
+const $ = id => document.getElementById(id);
+
+function fmt(n, d=0){
+  return Number(n).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+}
+
+function initDefaults(){
+  $('propDate').value = new Date().toISOString().slice(0,10);
+}
+
+function onDeviceModelChange(){
+  const val = $('deviceModel').value;
+  const preset = DEVICE_PRESETS[val];
+  $('customModelField').style.display = val === 'custom' ? 'block' : 'none';
+  $('saveDeviceField').style.display = val === 'custom' ? 'block' : 'none';
+  if(val !== 'custom' && preset){
+    $('hashrateTH').value = preset.hashrate;
+    $('powerW').value = preset.power;
+  }
+  render();
+}
+
+function addDeviceOption(key, label, hashrate, power){
+  DEVICE_PRESETS[key] = { name:label, hashrate, power };
+  const opt = document.createElement('option');
+  opt.value = key;
+  opt.textContent = `${label} (${hashrate} TH/s · ${power} W)`;
+  $('deviceModel').insertBefore(opt, $('deviceModel').querySelector('option[value="custom"]'));
+}
+
+function loadSharedDevices(){
+  if(!APPS_SCRIPT_URL){
+    $('deviceListStatus').textContent = 'Team device list not connected yet.';
+    return;
+  }
+  fetch(APPS_SCRIPT_URL + '?action=devices')
+    .then(r => r.json())
+    .then(list => {
+      const known = new Set(Object.values(DEVICE_PRESETS).map(d => (d.name||'').toLowerCase()));
+      (list || []).forEach(d => {
+        if(!d.model || known.has(d.model.toLowerCase())) return;
+        teamDeviceCounter++;
+        addDeviceOption('team_' + teamDeviceCounter, d.model, d.hashrate, d.power);
+        known.add(d.model.toLowerCase());
+      });
+      $('deviceListStatus').textContent = list && list.length
+        ? `${list.length} team-added model(s) loaded.`
+        : 'No team-added models yet — be the first!';
+    })
+    .catch(() => { $('deviceListStatus').textContent = 'Could not load team device list.'; });
+}
+
+function saveDeviceToTeam(){
+  const name = $('customModelName').value.trim();
+  const hashrate = parseFloat($('hashrateTH').value) || 0;
+  const power = parseFloat($('powerW').value) || 0;
+  if(!name){ alert('Type a model name first.'); return; }
+  if(!APPS_SCRIPT_URL){ alert('Team device list is not connected yet (APPS_SCRIPT_URL is empty).'); return; }
+  fetch(APPS_SCRIPT_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'addDevice', model:name, hashrate, power, addedBy: $('preparedBy').value || 'Unknown' })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if(res.success){
+      teamDeviceCounter++;
+      addDeviceOption('team_' + teamDeviceCounter, name, hashrate, power);
+      alert('Saved — visible to the whole team now.');
+    }
+  })
+  .catch(() => alert('Could not save the device. Check the connection.'));
+}
+
+// ---------- Shared image catalog (Name / URL / Type) ----------
+const IMAGE_CACHE = { device: [], hero: [] };
+
+function loadSharedImages(){
+  if(!APPS_SCRIPT_URL) return;
+  fetch(APPS_SCRIPT_URL + '?action=images')
+    .then(r => r.json())
+    .then(list => {
+      (list || []).forEach(img => {
+        if(img.type === 'device' || img.type === 'hero'){
+          IMAGE_CACHE[img.type].push(img);
+        }
+      });
+      refreshImageSelect('device');
+      refreshImageSelect('hero');
+    })
+    .catch(() => {});
+}
+
+function refreshImageSelect(type){
+  const select = $(type === 'device' ? 'devicePhotoSelect' : 'heroPhotoSelect');
+  select.innerHTML = '<option value="">— Upload below, or add a new one —</option>';
+  IMAGE_CACHE[type].forEach((img, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = img.name;
+    select.appendChild(opt);
+  });
+}
+
+function applySelectedImage(type){
+  const select = $(type === 'device' ? 'devicePhotoSelect' : 'heroPhotoSelect');
+  if(select.value === '') return;
+  const img = IMAGE_CACHE[type][Number(select.value)];
+  if(!img) return;
+  if(type === 'device'){
+    $('devicePhoto').innerHTML = `<img src="${img.url}" alt="${img.name}">`;
+    $('deviceImgName').textContent = '';
+  } else {
+    $('heroPhoto').style.backgroundImage = `linear-gradient(rgba(6,30,17,0.15), rgba(6,30,17,0.55)), url("${img.url}")`;
+    $('heroPhoto').style.backgroundSize = 'cover';
+    $('heroPhoto').style.backgroundPosition = 'center';
+    $('heroImgName').textContent = '';
+  }
+}
+
+function saveImageForNextTime(type){
+  const nameField = type === 'device' ? 'devicePhotoName' : 'heroPhotoName';
+  const urlField = type === 'device' ? 'devicePhotoUrl' : 'heroPhotoUrl';
+  const name = $(nameField).value.trim();
+  const url = $(urlField).value.trim();
+  if(!name || !url){ alert('Fill in both a name and an image URL first.'); return; }
+  if(!APPS_SCRIPT_URL){ alert('Shared image catalog is not connected yet (APPS_SCRIPT_URL is empty).'); return; }
+  if(url.length > 45000){
+    alert('This uploaded photo is too large to save to the shared sheet (Google Sheets cells cap around 50,000 characters). Try a smaller/more compressed image, or paste a hosted image URL instead.');
+    return;
+  }
+  fetch(APPS_SCRIPT_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'addImage', name, url, type, addedBy: $('preparedBy').value || 'Unknown' })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if(res.success){
+      IMAGE_CACHE[type].push({ name, url, type });
+      refreshImageSelect(type);
+      const select = $(type === 'device' ? 'devicePhotoSelect' : 'heroPhotoSelect');
+      select.value = String(IMAGE_CACHE[type].length - 1);
+      applySelectedImage(type);
+      alert('Saved — visible to the whole team now.');
+    }
+  })
+  .catch(() => alert('Could not save the image. Check the connection.'));
+}
+
+function logProposalToSheet(){
+  if(!APPS_SCRIPT_URL) return;
+  const modelVal = $('deviceModel').value;
+  const modelName = modelVal === 'custom' ? ($('customModelName').value || 'Custom Miner') : (DEVICE_PRESETS[modelVal] ? DEVICE_PRESETS[modelVal].name : 'Unknown');
+  fetch(APPS_SCRIPT_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({
+      action:'logProposal',
+      manager: $('preparedBy').value || 'Unknown',
+      customer: $('showCustomer').checked ? ($('customerName').value || 'Unnamed') : 'Not disclosed',
+      device: modelName,
+      qty: $('qty').value,
+      currency: $('coinSymbol').value || 'BTC'
+    })
+  }).catch(() => {});
+}
+
+function onElecTypeChange(){
+  const val = $('elecType').value;
+  $('elecRate').value = ELEC_PRESETS[val].rate;
+  render();
+}
+
+function onShowCustomerChange(){
+  const show = $('showCustomer').checked;
+  $('customerField').style.display = show ? 'block' : 'none';
+  $('customerPhoneField').style.display = show ? 'block' : 'none';
+  $('customerRow').style.display = show ? 'block' : 'none';
+  render();
+}
+
+function onShowCoinChange(){
+  const show = $('showCoin').checked;
+  $('coinPriceField').style.display = show ? 'block' : 'none';
+  $('btcRow1').style.display = show ? 'table-row' : 'none';
+  $('btcRow2').style.display = show ? 'table-row' : 'none';
+  render();
+}
+
+let accCounter = 0;
+function addAccessoryRow(name='', qty=1, price=''){
+  accCounter++;
+  const id = 'acc' + accCounter;
+  const row = document.createElement('div');
+  row.className = 'acc-row';
+  row.id = id;
+  row.innerHTML = `
+    <input type="text" placeholder="e.g. Radiator" class="acc-name" value="${name}">
+    <input type="number" placeholder="Qty" class="acc-qty" value="${qty}">
+    <input type="number" placeholder="Price $" class="acc-price" value="${price}">
+    <button type="button" class="acc-remove" onclick="document.getElementById('${id}').remove(); render();">×</button>
+  `;
+  row.querySelectorAll('input').forEach(el => {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  });
+  $('accessoriesList').appendChild(row);
+  render();
+}
+
+function handleImgUpload(inputId, targetId, nameId, isDevicePhoto){
+  const file = $(inputId).files[0];
+  if(!file) return;
+  $(nameId).textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const cleanName = file.name.replace(/\.[^/.]+$/, '');
+    if(isDevicePhoto){
+      $(targetId).innerHTML = `<img src="${e.target.result}" alt="device">`;
+      $('devicePhotoSelect').value = '';
+      $('devicePhotoName').value = cleanName;
+      $('devicePhotoUrl').value = e.target.result;
+    } else {
+      $(targetId).style.backgroundImage =
+        `linear-gradient(rgba(6,30,17,0.15), rgba(6,30,17,0.55)), url(${e.target.result})`;
+      $(targetId).style.backgroundSize = 'cover';
+      $(targetId).style.backgroundPosition = 'center';
+      $('heroPhotoSelect').value = '';
+      $('heroPhotoName').value = cleanName;
+      $('heroPhotoUrl').value = e.target.result;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function render(){
+  const modelVal = $('deviceModel').value;
+  const modelName = modelVal === 'custom' ? ($('customModelName').value || 'Custom Miner') : DEVICE_PRESETS[modelVal].name;
+  const hashrateTH = parseFloat($('hashrateTH').value) || 0;
+  const powerW = parseFloat($('powerW').value) || 0;
+  const qty = parseFloat($('qty').value) || 0;
+  const priceUnit = parseFloat($('priceUnit').value) || 0;
+  const elecTypeVal = $('elecType').value;
+  const elecRate = parseFloat($('elecRate').value) || 0;
+  const manualProfitDay = parseFloat($('manualProfitDay').value) || 0;
+  const coinSymbol = ($('coinSymbol').value || 'BTC').toUpperCase();
+  const coinPrice = parseFloat($('coinPrice').value) || 1;
+  const showCoin = $('showCoin').checked;
+  const showCustomer = $('showCustomer').checked;
+
+  const totalHashTH = qty * hashrateTH;
+  const totalHashPH = totalHashTH / 1000;
+  const totalPowerKW = (qty * powerW) / 1000;
+  const deviceCost = qty * priceUnit;
+
+  const accessories = Array.from(document.querySelectorAll('#accessoriesList .acc-row')).map(row => ({
+    name: row.querySelector('.acc-name').value || 'Item',
+    qty: parseFloat(row.querySelector('.acc-qty').value) || 0,
+    price: parseFloat(row.querySelector('.acc-price').value) || 0
+  }));
+  const accessoriesTotal = accessories.reduce((sum, a) => sum + a.qty * a.price, 0);
+  const totalInvestment = deviceCost + accessoriesTotal;
+
+  const profitPerDeviceDay = manualProfitDay;
+  const netProfitDay = manualProfitDay * qty;
+  const netProfitMonth = netProfitDay * 30;
+  const paybackDays = netProfitDay > 0 ? totalInvestment / netProfitDay : 0;
+
+  // header / info box
+  $('outCustomer').textContent = $('customerName').value || '—';
+  $('outCustomerPhone').textContent = $('customerPhone').value || '';
+  $('customerRow').style.display = showCustomer ? 'block' : 'none';
+  const dateVal = $('propDate').value;
+  $('outDate').textContent = dateVal ? new Date(dateVal+'T00:00:00').toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'}) : '—';
+  $('outPreparedBy').innerHTML = (($('preparedBy').value)||'—') + '<br><span style="font-weight:400;opacity:.85;">AryaMiner</span>';
+
+  $('outOverview').textContent =
+    `This proposal outlines a ${coinSymbol} mining solution using ${fmt(qty)}x ${modelName} units, powered by ${ELEC_PRESETS[elecTypeVal].label.toLowerCase()}.`;
+
+  // recommended miner
+  $('outModel').textContent = modelName;
+  $('outQty').textContent = fmt(qty) + ' Units';
+  $('outHashrate').textContent = fmt(totalHashPH,2) + ' PH/s';
+  $('outPower').textContent = '~' + fmt(totalPowerKW,1) + ' kW';
+  $('outElecType').textContent = ELEC_PRESETS[elecTypeVal].label;
+  $('outCoin').textContent = coinSymbol;
+  $('outPrice').textContent = '$' + fmt(priceUnit) + ' / unit (Total: $' + fmt(deviceCost) + ')';
+
+  if(accessories.length > 0 && accessoriesTotal > 0){
+    $('accRow').style.display = 'table-row';
+    $('outAccessories').textContent = accessories.map(a => `${a.name} x${fmt(a.qty)}`).join(', ') + ' — $' + fmt(accessoriesTotal);
+  } else {
+    $('accRow').style.display = 'none';
+  }
+  $('outTotalInvestment').textContent = '$' + fmt(totalInvestment);
+
+  // key advantages — fully editable by the sales manager
+  $('outAdv1').textContent = $('adv1').value;
+  $('outAdv2').textContent = $('adv2').value;
+  $('outAdv3').textContent = $('adv3').value;
+  $('outAdv4').textContent = $('adv4').value;
+  $('outAdv5').textContent = $('adv5').value;
+
+  // performance table
+  $('outProfitDeviceDay').textContent = '~$' + fmt(profitPerDeviceDay,1);
+  $('outProfitTotalDay').textContent = '~$' + fmt(netProfitDay,0);
+  $('outProfitTotalMonth').textContent = '~$' + fmt(netProfitMonth,0);
+  $('outPayback').textContent = paybackDays > 0 ? '~' + fmt(paybackDays,0) + ' days (~' + fmt(paybackDays/30,1) + ' months)' : '—';
+
+  if(showCoin){
+    const coinDay = netProfitDay / coinPrice;
+    const coinMonth = netProfitMonth / coinPrice;
+    $('btcLabel1').textContent = `Estimated Net Profit (total / day, ${coinSymbol})`;
+    $('btcLabel2').textContent = `Estimated Net Profit (total / month, ${coinSymbol})`;
+    $('outBtcDay').textContent = '~' + coinDay.toFixed(6) + ' ' + coinSymbol;
+    $('outBtcMonth').textContent = '~' + coinMonth.toFixed(5) + ' ' + coinSymbol;
+  }
+
+  // future expansion / important notice — copied as-is from the editable text areas
+  $('outFuture').textContent = $('futureExpansion').value;
+  $('outNotice').textContent = $('importantNotice').value;
+
+  fitSheet();
+}
+
+function fitSheet(){
+  const wrap = document.querySelector('.preview-wrap');
+  const sheet = $('sheet');
+  const scaleBox = $('sheetScale');
+  const available = wrap.clientWidth - 4;
+  const scale = Math.min(1, available / 794);
+  sheet.style.transform = `scale(${scale})`;
+  sheet.style.transformOrigin = 'top left';
+  scaleBox.style.width = (794 * scale) + 'px';
+  scaleBox.style.height = (sheet.offsetHeight * scale) + 'px';
+}
+
+function exportPDF(){
+  logProposalToSheet();
+  const sheet = $('sheet');
+  const scaleBox = $('sheetScale');
+  const prevTransform = sheet.style.transform;
+  sheet.style.transform = 'none';
+  scaleBox.style.overflow = 'visible';
+  scaleBox.style.width = 'auto';
+  scaleBox.style.height = 'auto';
+  html2canvas(sheet, {scale:2, useCORS:true}).then(canvas => {
+    sheet.style.transform = prevTransform;
+    scaleBox.style.overflow = 'hidden';
+    fitSheet();
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','pt','a4');
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageW/canvas.width, pageH/canvas.height);
+    pdf.addImage(imgData,'PNG',0,0,canvas.width*ratio,canvas.height*ratio);
+    pdf.save('AryaMiner-Proposal.pdf');
+  });
+}
+
+function exportPNG(){
+  logProposalToSheet();
+  const sheet = $('sheet');
+  const scaleBox = $('sheetScale');
+  const prevTransform = sheet.style.transform;
+  sheet.style.transform = 'none';
+  scaleBox.style.overflow = 'visible';
+  scaleBox.style.width = 'auto';
+  scaleBox.style.height = 'auto';
+  html2canvas(sheet, {scale:2, useCORS:true}).then(canvas => {
+    sheet.style.transform = prevTransform;
+    scaleBox.style.overflow = 'hidden';
+    fitSheet();
+    const link = document.createElement('a');
+    link.download = 'AryaMiner-Proposal.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+// wire up events
+document.addEventListener('DOMContentLoaded', () => {
+  initDefaults();
+  loadSharedDevices();
+  loadSharedImages();
+  ['deviceModel'].forEach(id => $(id).addEventListener('change', onDeviceModelChange));
+  ['elecType'].forEach(id => $(id).addEventListener('change', onElecTypeChange));
+  $('showCustomer').addEventListener('change', onShowCustomerChange);
+  $('showCoin').addEventListener('change', onShowCoinChange);
+  $('deviceImgInput').addEventListener('change', () => handleImgUpload('deviceImgInput','devicePhoto','deviceImgName', true));
+  $('heroImgInput').addEventListener('change', () => handleImgUpload('heroImgInput','heroPhoto','heroImgName', false));
+  $('devicePhotoSelect').addEventListener('change', () => applySelectedImage('device'));
+  $('heroPhotoSelect').addEventListener('change', () => applySelectedImage('hero'));
+
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  });
+
+  window.addEventListener('resize', fitSheet);
+  render();
+});
+</script>
+</body>
+</html>
